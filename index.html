@@ -44,7 +44,6 @@
     }
     .header-info h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
     .header-info p { font-size: 13px; color: #888; }
-
     #api-setup {
       background: #EEEDFE;
       border: 0.5px solid #AFA9EC;
@@ -52,7 +51,7 @@
       padding: 1rem 1.25rem;
       margin-bottom: 16px;
     }
-    #api-setup p { font-size: 14px; color: #3C3489; margin-bottom: 8px; }
+    #api-setup p { font-size: 14px; color: #3C3489; margin-bottom: 6px; }
     #api-setup input {
       width: 100%;
       padding: 8px 12px;
@@ -74,7 +73,6 @@
       cursor: pointer;
     }
     #api-setup button:hover { background: #534AB7; }
-
     .chips {
       display: flex;
       flex-wrap: wrap;
@@ -91,7 +89,6 @@
       cursor: pointer;
     }
     .chip:hover { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
-
     #chat-box {
       background: #f9f8f5;
       border: 0.5px solid #e0e0e0;
@@ -103,7 +100,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     .msg { display: flex; gap: 8px; align-items: flex-end; }
     .msg.user { flex-direction: row-reverse; }
@@ -138,6 +135,15 @@
       color: #26215C;
       border-bottom-right-radius: 4px;
     }
+    .voice-tag {
+      font-size: 11px;
+      color: #7F77DD;
+      margin-top: 3px;
+      padding: 2px 8px;
+      background: #EEEDFE;
+      border-radius: 6px;
+      display: inline-block;
+    }
     .typing {
       display: flex;
       gap: 4px;
@@ -162,8 +168,14 @@
       0%,60%,100% { transform: translateY(0); }
       30% { transform: translateY(-6px); }
     }
-
-    #input-row { display: flex; gap: 8px; }
+    .status-bar {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      min-height: 18px;
+      margin-bottom: 8px;
+    }
+    #input-row { display: flex; gap: 8px; align-items: center; }
     #user-input {
       flex: 1;
       padding: 10px 14px;
@@ -188,7 +200,25 @@
     }
     #send-btn:hover { background: #534AB7; }
     #send-btn:disabled { background: #e0e0e0; color: #aaa; cursor: not-allowed; }
-
+    #mic-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #f5f4f0;
+      border: 0.5px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #mic-btn:hover { background: #EEEDFE; border-color: #AFA9EC; }
+    #mic-btn.recording { background: #FCEBEB; border-color: #F09595; animation: pulse 1s infinite; }
+    #mic-btn:disabled { opacity: 0.4; cursor: not-allowed; animation: none; }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
     .error-msg {
       background: #FCEBEB;
       border: 0.5px solid #F09595;
@@ -196,13 +226,11 @@
       padding: 10px 14px;
       font-size: 13px;
       color: #A32D2D;
-      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
 <div id="app">
-
   <div class="header">
     <div class="header-avatar">B</div>
     <div class="header-info">
@@ -212,9 +240,12 @@
   </div>
 
   <div id="api-setup">
-    <p>Enter your Anthropic API key to start chatting with Buddy.</p>
-    <input type="password" id="api-key-input" placeholder="sk-ant-..." />
-    <button onclick="saveKey()">Start</button>
+    <p>Anthropic API key (conversation)</p>
+    <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
+    <p style="margin-top:4px;">OpenAI API key (voice recognition)</p>
+    <input type="password" id="openai-key" placeholder="sk-..." />
+    <br/>
+    <button onclick="saveKeys()">Start chatting</button>
   </div>
 
   <div class="chips">
@@ -226,67 +257,82 @@
   </div>
 
   <div id="chat-box"></div>
+  <div class="status-bar" id="status-bar"></div>
 
   <div id="input-row">
-    <input id="user-input" type="text" placeholder="Write in English here..." autocomplete="off" />
+    <button id="mic-btn" onclick="toggleMic()" disabled title="Click to speak">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10a7 7 0 0 0 14 0"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8" y1="22" x2="16" y2="22"/>
+      </svg>
+    </button>
+    <input id="user-input" type="text" placeholder="Write or use the mic..." autocomplete="off" />
     <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
   </div>
-
 </div>
 
 <script>
-const SYSTEM_PROMPT = `You are Buddy, a friendly and encouraging English conversation partner for children aged 10 to 12 years old who are learning English at A1-A2 level.
+const SYSTEM_PROMPT = `You are Buddy, a friendly and encouraging English conversation partner for children aged 10 to 12 years old learning English at A1-A2 level.
 
-Your personality:
-- Warm, patient, enthusiastic and fun
-- You celebrate every effort the child makes
-- You never make them feel bad for mistakes
+Your personality: warm, patient, enthusiastic, fun. Celebrate every effort. Never make the child feel bad.
 
-Your language rules:
-- ALWAYS use simple, short sentences (max 15 words per sentence)
-- ONLY use A1-A2 vocabulary (common everyday words)
-- NEVER use complex grammar — use present simple, past simple, and "going to" future only
-- Ask ONE simple question at the end of each reply to keep the conversation going
+Language rules:
+- Short simple sentences, max 15 words each
+- A1-A2 vocabulary only
+- Present simple, past simple, "going to" future only
+- Ask ONE simple question at the end of each reply
 
-How you handle mistakes:
-- Never say "That is wrong" or "You made a mistake"
-- Gently reformulate: "Great! We can also say: [correct version]"
-- Then continue naturally with the conversation
+Handling mistakes: never say "wrong" or "mistake". Gently reformulate: "Great! We can also say: [correct version]". Then continue naturally.
 
-Topics you love talking about:
-- Animals, pets, food, family, school, sports, music, games, holidays, favourite things
+When a message starts with [VOICE]: the child spoke aloud and was transcribed. If the transcription seems odd, it may be a pronunciation issue. Add a short friendly tip like: "Tip: say 'fam-i-ly', three sounds!"
 
-Keep your replies short: 2 to 4 sentences maximum, then one question.
-Always be encouraging. Use exclamation marks to show enthusiasm.
-Start every first message by introducing yourself warmly and asking the child their name.`;
+Favourite topics: animals, pets, food, family, school, sports, music, games, holidays.
+
+Keep replies to 2-4 sentences then one question. Be encouraging! Use exclamation marks.
+On the very first message: introduce yourself warmly and ask the child their name.`;
 
 let history = [];
-let apiKey = '';
+let anthropicKey = '';
+let openaiKey = '';
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
 
-function saveKey() {
-  const val = document.getElementById('api-key-input').value.trim();
-  if (!val.startsWith('sk-ant-')) {
-    alert('Please enter a valid Anthropic API key (starts with sk-ant-)');
-    return;
-  }
-  apiKey = val;
+function saveKeys() {
+  const ak = document.getElementById('anthropic-key').value.trim();
+  const ok = document.getElementById('openai-key').value.trim();
+  if (!ak.startsWith('sk-ant-')) { alert('Please enter a valid Anthropic API key (starts with sk-ant-)'); return; }
+  if (!ok.startsWith('sk-')) { alert('Please enter a valid OpenAI API key (starts with sk-)'); return; }
+  anthropicKey = ak;
+  openaiKey = ok;
   document.getElementById('api-setup').style.display = 'none';
   document.getElementById('send-btn').disabled = false;
-  startConversation();
+  document.getElementById('mic-btn').disabled = false;
+  callClaude('Hello! Please introduce yourself.', false);
 }
 
-function addMessage(role, text) {
+function addMessage(role, text, isVoice) {
   const box = document.getElementById('chat-box');
   const div = document.createElement('div');
   div.className = 'msg ' + (role === 'user' ? 'user' : 'buddy');
   const av = document.createElement('div');
   av.className = 'avatar ' + (role === 'user' ? 'kid' : 'buddy');
   av.textContent = role === 'user' ? 'Me' : 'B';
+  const wrap = document.createElement('div');
   const bub = document.createElement('div');
   bub.className = 'bubble';
   bub.textContent = text;
+  wrap.appendChild(bub);
+  if (isVoice) {
+    const tag = document.createElement('div');
+    tag.className = 'voice-tag';
+    tag.textContent = 'spoken';
+    wrap.appendChild(tag);
+  }
   div.appendChild(av);
-  div.appendChild(bub);
+  div.appendChild(wrap);
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -295,7 +341,7 @@ function showTyping() {
   const box = document.getElementById('chat-box');
   const div = document.createElement('div');
   div.className = 'msg buddy';
-  div.id = 'typing-indicator';
+  div.id = 'typing';
   const av = document.createElement('div');
   av.className = 'avatar buddy';
   av.textContent = 'B';
@@ -309,9 +355,11 @@ function showTyping() {
 }
 
 function removeTyping() {
-  const t = document.getElementById('typing-indicator');
+  const t = document.getElementById('typing');
   if (t) t.remove();
 }
+
+function setStatus(msg) { document.getElementById('status-bar').textContent = msg; }
 
 function showError(msg) {
   const box = document.getElementById('chat-box');
@@ -322,17 +370,19 @@ function showError(msg) {
   box.scrollTop = box.scrollHeight;
 }
 
-async function callClaude(userText) {
-  history.push({ role: 'user', content: userText });
-  const btn = document.getElementById('send-btn');
-  btn.disabled = true;
+async function callClaude(text, isVoice) {
+  const apiText = isVoice ? '[VOICE] ' + text : text;
+  history.push({ role: 'user', content: apiText });
+  if (text !== 'Hello! Please introduce yourself.') addMessage('user', text, isVoice);
+  document.getElementById('send-btn').disabled = true;
   showTyping();
+  setStatus('Buddy is thinking...');
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': anthropicKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
@@ -344,41 +394,86 @@ async function callClaude(userText) {
       })
     });
     const data = await res.json();
+    removeTyping();
     if (data.error) {
-      removeTyping();
-      showError('API error: ' + data.error.message);
+      showError('Anthropic error: ' + data.error.message);
       history.pop();
     } else {
       const reply = data.content.map(b => b.text || '').join('');
       history.push({ role: 'assistant', content: reply });
-      removeTyping();
-      addMessage('buddy', reply);
+      addMessage('buddy', reply, false);
     }
   } catch(e) {
     removeTyping();
-    showError('Connection error. Please check your API key and try again.');
+    showError('Connection error. Check your API keys and try again.');
     history.pop();
   }
-  btn.disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  setStatus('');
 }
 
-async function startConversation() {
-  await callClaude('Hello! Please introduce yourself to me.');
+async function transcribeAudio(blob) {
+  setStatus('Transcribing your voice...');
+  const form = new FormData();
+  form.append('file', blob, 'audio.webm');
+  form.append('model', 'whisper-1');
+  form.append('language', 'en');
+  try {
+    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + openaiKey },
+      body: form
+    });
+    const data = await res.json();
+    if (data.error) { showError('Whisper error: ' + data.error.message); setStatus(''); return null; }
+    return data.text;
+  } catch(e) {
+    showError('Voice error. Please try again.');
+    setStatus('');
+    return null;
+  }
+}
+
+async function toggleMic() {
+  if (isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    document.getElementById('mic-btn').classList.remove('recording');
+    setStatus('Processing...');
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const text = await transcribeAudio(blob);
+        if (text && text.trim()) await callClaude(text.trim(), true);
+        else setStatus('');
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      document.getElementById('mic-btn').classList.add('recording');
+      setStatus('Recording... click the mic again to stop.');
+    } catch(e) {
+      showError('Microphone access denied. Please allow microphone in your browser settings.');
+    }
+  }
 }
 
 async function sendMessage() {
   const input = document.getElementById('user-input');
   const text = input.value.trim();
-  if (!text || !apiKey) return;
+  if (!text) return;
   input.value = '';
-  addMessage('user', text);
-  await callClaude(text);
+  await callClaude(text, false);
 }
 
 function sendChip(text) {
-  if (!apiKey) { alert('Please enter your API key first!'); return; }
-  document.getElementById('user-input').value = text;
-  sendMessage();
+  if (!anthropicKey) { alert('Please enter your API keys first!'); return; }
+  callClaude(text, false);
 }
 
 document.getElementById('user-input').addEventListener('keydown', e => {
