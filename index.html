@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buddy — English Practice</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f4f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #app {
+      background: white;
+      border-radius: 16px;
+      border: 0.5px solid #ddd;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .header-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #CECBF6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 500;
+      color: #3C3489;
+    }
+    .header-info h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .header-info p { font-size: 13px; color: #888; }
+
+    #api-setup {
+      background: #EEEDFE;
+      border: 0.5px solid #AFA9EC;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 16px;
+    }
+    #api-setup p { font-size: 14px; color: #3C3489; margin-bottom: 8px; }
+    #api-setup input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0.5px solid #AFA9EC;
+      font-size: 14px;
+      font-family: monospace;
+      background: white;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+    #api-setup button {
+      padding: 8px 16px;
+      background: #7F77DD;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #api-setup button:hover { background: #534AB7; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #f5f4f0;
+      border: 0.5px solid #ddd;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+    }
+    .chip:hover { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+
+    #chat-box {
+      background: #f9f8f5;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 300px;
+      max-height: 420px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .msg { display: flex; gap: 8px; align-items: flex-end; }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+    .avatar.buddy { background: #CECBF6; color: #3C3489; }
+    .avatar.kid { background: #9FE1CB; color: #085041; }
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      max-width: 75%;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .buddy .bubble {
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      color: #1a1a1a;
+      border-bottom-left-radius: 4px;
+    }
+    .user .bubble {
+      background: #EEEDFE;
+      color: #26215C;
+      border-bottom-right-radius: 4px;
+    }
+    .typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 10px 14px;
+      background: white;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #aaa;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    #input-row { display: flex; gap: 8px; }
+    #user-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 0.5px solid #ccc;
+      font-size: 15px;
+      font-family: system-ui, sans-serif;
+      outline: none;
+      color: #1a1a1a;
+      background: white;
+    }
+    #user-input:focus { border-color: #7F77DD; box-shadow: 0 0 0 2px #EEEDFE; }
+    #send-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: #7F77DD;
+      color: white;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #send-btn:hover { background: #534AB7; }
+    #send-btn:disabled { background: #e0e0e0; color: #aaa; cursor: not-allowed; }
+
+    .error-msg {
+      background: #FCEBEB;
+      border: 0.5px solid #F09595;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #A32D2D;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div class="header-avatar">B</div>
+    <div class="header-info">
+      <h1>Buddy</h1>
+      <p>Your English conversation partner — A1/A2</p>
+    </div>
+  </div>
+
+  <div id="api-setup">
+    <p>Enter your Anthropic API key to start chatting with Buddy.</p>
+    <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+    <button onclick="saveKey()">Start</button>
+  </div>
+
+  <div class="chips">
+    <span class="chip" onclick="sendChip('Hi Buddy! What is your name?')">Say hello</span>
+    <span class="chip" onclick="sendChip('What is your favourite animal?')">Favourite animal</span>
+    <span class="chip" onclick="sendChip('Tell me about your family.')">My family</span>
+    <span class="chip" onclick="sendChip('What sport do you like?')">Sports</span>
+    <span class="chip" onclick="sendChip('What did you do today?')">My day</span>
+  </div>
+
+  <div id="chat-box"></div>
+
+  <div id="input-row">
+    <input id="user-input" type="text" placeholder="Write in English here..." autocomplete="off" />
+    <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
+  </div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are Buddy, a friendly and encouraging English conversation partner for children aged 10 to 12 years old who are learning English at A1-A2 level.
+
+Your personality:
+- Warm, patient, enthusiastic and fun
+- You celebrate every effort the child makes
+- You never make them feel bad for mistakes
+
+Your language rules:
+- ALWAYS use simple, short sentences (max 15 words per sentence)
+- ONLY use A1-A2 vocabulary (common everyday words)
+- NEVER use complex grammar — use present simple, past simple, and "going to" future only
+- Ask ONE simple question at the end of each reply to keep the conversation going
+
+How you handle mistakes:
+- Never say "That is wrong" or "You made a mistake"
+- Gently reformulate: "Great! We can also say: [correct version]"
+- Then continue naturally with the conversation
+
+Topics you love talking about:
+- Animals, pets, food, family, school, sports, music, games, holidays, favourite things
+
+Keep your replies short: 2 to 4 sentences maximum, then one question.
+Always be encouraging. Use exclamation marks to show enthusiasm.
+Start every first message by introducing yourself warmly and asking the child their name.`;
+
+let history = [];
+let apiKey = '';
+
+function saveKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    alert('Please enter a valid Anthropic API key (starts with sk-ant-)');
+    return;
+  }
+  apiKey = val;
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('send-btn').disabled = false;
+  startConversation();
+}
+
+function addMessage(role, text) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : 'buddy');
+  const av = document.createElement('div');
+  av.className = 'avatar ' + (role === 'user' ? 'kid' : 'buddy');
+  av.textContent = role === 'user' ? 'Me' : 'B';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.textContent = text;
+  div.appendChild(av);
+  div.appendChild(bub);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function showTyping() {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'msg buddy';
+  div.id = 'typing-indicator';
+  const av = document.createElement('div');
+  av.className = 'avatar buddy';
+  av.textContent = 'B';
+  const t = document.createElement('div');
+  t.className = 'typing';
+  t.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  div.appendChild(av);
+  div.appendChild(t);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+function showError(msg) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'error-msg';
+  div.textContent = msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function callClaude(userText) {
+  history.push({ role: 'user', content: userText });
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: history
+      })
+    });
+    const data = await res.json();
+    if (data.error) {
+      removeTyping();
+      showError('API error: ' + data.error.message);
+      history.pop();
+    } else {
+      const reply = data.content.map(b => b.text || '').join('');
+      history.push({ role: 'assistant', content: reply });
+      removeTyping();
+      addMessage('buddy', reply);
+    }
+  } catch(e) {
+    removeTyping();
+    showError('Connection error. Please check your API key and try again.');
+    history.pop();
+  }
+  btn.disabled = false;
+}
+
+async function startConversation() {
+  await callClaude('Hello! Please introduce yourself to me.');
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text || !apiKey) return;
+  input.value = '';
+  addMessage('user', text);
+  await callClaude(text);
+}
+
+function sendChip(text) {
+  if (!apiKey) { alert('Please enter your API key first!'); return; }
+  document.getElementById('user-input').value = text;
+  sendMessage();
+}
+
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+</body>
+</html>
